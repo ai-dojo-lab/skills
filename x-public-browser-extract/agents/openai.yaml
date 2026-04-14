@@ -1,0 +1,3 @@
+display_name: X Public Browser Extract
+short_description: Read public X posts via browser without X API keys.
+default_prompt: Extract readable text, links, tx hashes, addresses, images, and on-chain clues from a public X/Twitter post by using browser tools first and r.jina.ai only as fallback.

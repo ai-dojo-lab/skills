@@ -66,3 +66,7 @@ For every relevant X post, try to recover:
 - Do **not** rely on one path only.
 - If browser extraction is flaky, immediately switch to image OCR + mirrors + explorer follow-through.
 - For attack events, prioritize the **privilege-change / mint / dump** sequence over price commentary.
+
+
+## Reference
+- For the Hermes-to-OpenClaw capability mapping, read `references/hermes_workflow_map.md`.
