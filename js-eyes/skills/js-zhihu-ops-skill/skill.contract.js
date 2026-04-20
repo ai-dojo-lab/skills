@@ -1,0 +1,134 @@
+'use strict';
+
+const pkg = require('./package.json');
+const { BrowserAutomation } = require('./lib/js-eyes-client');
+const { getAnswer, getArticle } = require('./lib/api');
+const { resolveRuntimeConfig } = require('./lib/runtimeConfig');
+
+const CLI_COMMANDS = [
+  { name: 'answer', description: '读取知乎回答详情' },
+  { name: 'article', description: '读取知乎专栏详情' },
+];
+
+function makeLogger(logger) {
+  return {
+    info: typeof logger?.info === 'function' ? logger.info.bind(logger) : console.log.bind(console),
+    warn: typeof logger?.warn === 'function' ? logger.warn.bind(logger) : console.warn.bind(console),
+    error: typeof logger?.error === 'function' ? logger.error.bind(logger) : console.error.bind(console),
+  };
+}
+
+function createRuntime(config = {}, logger) {
+  const resolvedConfig = resolveRuntimeConfig(config);
+  const runtimeConfig = {
+    serverUrl: resolvedConfig.serverUrl,
+    recording: resolvedConfig.recording,
+  };
+  const resolvedLogger = makeLogger(logger);
+  let bot = null;
+
+  return {
+    config: runtimeConfig,
+    logger: resolvedLogger,
+    ensureBot() {
+      if (!bot) {
+        bot = new BrowserAutomation(runtimeConfig.serverUrl, { logger: resolvedLogger });
+      }
+      return bot;
+    },
+    textResult(text) {
+      return { content: [{ type: 'text', text }] };
+    },
+    jsonResult(value) {
+      return this.textResult(JSON.stringify(value, null, 2));
+    },
+  };
+}
+
+const TOOL_DEFINITIONS = [
+  {
+    name: 'zhihu_get_answer',
+    label: 'Zhihu Ops: Get Answer',
+    description: '读取知乎回答详情，返回标题、作者、正文、点赞和评论数。',
+    parameters: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: '知乎回答 URL' },
+      },
+      required: ['url'],
+    },
+    optional: true,
+    async execute(runtime, params, context = {}) {
+      return getAnswer(runtime.ensureBot(), params.url, {
+        browserServer: runtime.config.serverUrl,
+        recording: runtime.config.recording,
+        runId: context.toolCallId,
+      });
+    },
+  },
+  {
+    name: 'zhihu_get_article',
+    label: 'Zhihu Ops: Get Article',
+    description: '读取知乎专栏详情，返回标题、作者、发布时间和正文。',
+    parameters: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: '知乎专栏 URL' },
+      },
+      required: ['url'],
+    },
+    optional: true,
+    async execute(runtime, params, context = {}) {
+      return getArticle(runtime.ensureBot(), params.url, {
+        browserServer: runtime.config.serverUrl,
+        recording: runtime.config.recording,
+        runId: context.toolCallId,
+      });
+    },
+  },
+];
+
+function createOpenClawAdapter(config = {}, logger) {
+  const runtime = createRuntime(config, logger);
+  return {
+    runtime,
+    tools: TOOL_DEFINITIONS.map((tool) => ({
+      name: tool.name,
+      label: tool.label,
+      description: tool.description,
+      parameters: tool.parameters,
+      optional: tool.optional,
+      async execute(toolCallId, params) {
+        const result = await tool.execute(runtime, params, { toolCallId });
+        return runtime.jsonResult(result);
+      },
+    })),
+  };
+}
+
+module.exports = {
+  id: pkg.name,
+  name: 'JS Zhihu Ops Skill',
+  version: pkg.version,
+  description: pkg.description,
+  runtime: {
+    requiresServer: true,
+    requiresBrowserExtension: true,
+    platforms: ['zhihu.com'],
+  },
+  cli: {
+    entry: './cli/index.js',
+    commands: CLI_COMMANDS,
+  },
+  openclaw: {
+    tools: TOOL_DEFINITIONS.map((tool) => ({
+      name: tool.name,
+      label: tool.label,
+      description: tool.description,
+      parameters: tool.parameters,
+      optional: tool.optional,
+    })),
+  },
+  createRuntime,
+  createOpenClawAdapter,
+};

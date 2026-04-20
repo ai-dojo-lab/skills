@@ -1,0 +1,44 @@
+work_dir/
+
+# Firefox AMO upload metadata
+extensions/firefox/.amo-upload-uuid
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# Build outputs
+dist/
+build/
+*.xpi
+*.zip
+# Allow skill zips so fallback download (jsDelivr/GitHub raw) works
+!docs/skills/**/*.zip
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
